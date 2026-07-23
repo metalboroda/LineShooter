@@ -1,0 +1,30 @@
+using Assets.Scripts.Enums;
+using Assets.Scripts.EventBus;
+using Assets.Scripts.EventsFolder;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace Assets.Scripts.UI.Canvases
+{
+    public class InfoCanvasHandler : MonoBehaviour
+    {
+        [Header("Data")]
+        [SerializeField] private Button backButton;
+
+        private void OnEnable()
+        {
+            backButton.onClick.AddListener(() =>
+            {
+                EventBus<UIEvents.UIButtonClicked>.Raise(new UIEvents.UIButtonClicked
+                {
+                    ButtonType = UiButtonType.Back
+                });
+            });
+        }
+
+        private void OnDisable()
+        {
+            backButton.onClick.RemoveAllListeners();
+        }
+    }
+}

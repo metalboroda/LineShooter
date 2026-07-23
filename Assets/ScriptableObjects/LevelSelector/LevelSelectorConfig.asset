@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 613ced087c2d66c4f8a3925eb30ba330, type: 3}
+  m_Name: LevelSelectorConfig
+  m_EditorClassIdentifier: Assembly-CSharp::Assets.Scripts.ScriptableObjects.LevelSelector.LevelSelectorConfigSo
+  <LevelSelectorItems>k__BackingField:
+  - <Name>k__BackingField: Level 1
+    <Rating>k__BackingField: 0
+    <Unlocked>k__BackingField: 0
+    <LevelSelectorItemPrefab>k__BackingField: {fileID: 5940494965327168004, guid: 62453d68c96760448b5d99dec3f7faf0, type: 3}
