@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace Assets.Scripts.UI.Canvases
 {
-    public class PauseCanvasHandler : MonoBehaviour
+    public class PauseCanvasHandler : CanvasHandlerBase
     {
         [Header("References")]
         [SerializeField] private Button resumeButton;
@@ -14,7 +14,7 @@ namespace Assets.Scripts.UI.Canvases
         [SerializeField] private Button mainMenuButton;
         [SerializeField] private Button settingsButton;
 
-        private void OnEnable()
+        protected override void OnShown()
         {
             resumeButton.onClick.AddListener(() =>
             {
@@ -49,7 +49,7 @@ namespace Assets.Scripts.UI.Canvases
             });
         }
 
-        private void OnDisable()
+        protected override void OnHidden()
         {
             resumeButton.onClick.RemoveAllListeners();
             restartButton.onClick.RemoveAllListeners();

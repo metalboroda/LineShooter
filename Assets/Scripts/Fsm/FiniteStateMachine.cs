@@ -1,5 +1,6 @@
 using System;
-using System.Collections;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Assets.Scripts.FSM
@@ -12,13 +13,13 @@ namespace Assets.Scripts.FSM
         public event Action<IState<TContext>> StateChanged;
 
         private bool _isLocked;
-        private Coroutine _stateChangeCoroutine;
         private readonly MonoBehaviour _coroutineRunner;
+        private CancellationTokenSource _stateChangeCts;
 
         public FiniteStateMachine(MonoBehaviour coroutineRunner)
         {
             _coroutineRunner = coroutineRunner ?? throw new ArgumentNullException(nameof(coroutineRunner),
-                "MonoBehaviour runner cannot be null for FSM operations requiring coroutines.");
+                "MonoBehaviour runner cannot be null for FSM operations requiring delayed state changes.");
         }
 
         public void Initialize(IState<TContext> initialState)
@@ -96,7 +97,7 @@ namespace Assets.Scripts.FSM
                 }
             }
 
-            if (_stateChangeCoroutine != null)
+            if (_stateChangeCts != null)
             {
                 if (!forceChange)
                 {
@@ -109,7 +110,9 @@ namespace Assets.Scripts.FSM
                 StopDelayedStateChangeInternal();
             }
 
-            _stateChangeCoroutine = _coroutineRunner.StartCoroutine(DoChangeStateWithDelay(newState, delay, forceChange));
+            _stateChangeCts = CancellationTokenSource.CreateLinkedTokenSource(_coroutineRunner.GetCancellationTokenOnDestroy());
+            
+            DoChangeStateWithDelay(newState, delay, forceChange, _stateChangeCts.Token).Forget();
         }
 
         public void StopDelayedStateChange()
@@ -162,9 +165,15 @@ namespace Assets.Scripts.FSM
             }
         }
 
-        private IEnumerator DoChangeStateWithDelay(IState<TContext> newState, float delay, bool forceChange)
+        private async UniTaskVoid DoChangeStateWithDelay(IState<TContext> newState, float delay, bool forceChange, CancellationToken token)
         {
-            yield return new WaitForSeconds(delay);
+            bool wasCancelled = await UniTask.Delay(TimeSpan.FromSeconds(delay), cancellationToken: token)
+                .SuppressCancellationThrow();
+
+            if (wasCancelled)
+            {
+                return;
+            }
 
             if (!forceChange)
             {
@@ -172,34 +181,26 @@ namespace Assets.Scripts.FSM
                 {
                     Debug.LogWarning($"[FSM] Delayed state change cancelled for {newState.GetType().Name}. FSM was locked during delay.");
 
-                    _stateChangeCoroutine = null;
-                    yield break;
+                    _stateChangeCts = null;
+                    return;
                 }
             }
 
             if (newState != CurrentState || forceChange)
-            {
                 PerformStateChange(newState);
-            }
             else
-            {
                 Debug.Log($"[FSM] Delayed state change cancelled for {newState.GetType().Name}. State became the same during delay.");
-            }
-
-
-            _stateChangeCoroutine = null;
+            
+            _stateChangeCts = null;
         }
 
         private void StopDelayedStateChangeInternal()
         {
-            if (_stateChangeCoroutine != null)
+            if (_stateChangeCts != null)
             {
-                if (_coroutineRunner)
-                {
-                    _coroutineRunner.StopCoroutine(_stateChangeCoroutine);
-                }
-
-                _stateChangeCoroutine = null;
+                _stateChangeCts.Cancel();
+                _stateChangeCts.Dispose();
+                _stateChangeCts = null;
             }
         }
     }

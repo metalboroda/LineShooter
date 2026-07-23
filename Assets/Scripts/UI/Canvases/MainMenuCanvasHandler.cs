@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 namespace Assets.Scripts.UI.Canvases
 {
-    public class MainMenuCanvasHandler : MonoBehaviour
+    public class MainMenuCanvasHandler : CanvasHandlerBase
     {
         [Header("References")]
         [SerializeField] private Button startButton;
@@ -14,7 +14,7 @@ namespace Assets.Scripts.UI.Canvases
         [SerializeField] private Button shopButton;
         [SerializeField] private Button infoButton;
 
-        private void OnEnable()
+        protected override void OnShown()
         {
             startButton.onClick.AddListener(() =>
             {
@@ -49,7 +49,7 @@ namespace Assets.Scripts.UI.Canvases
             });
         }
 
-        private void OnDisable()
+        protected override void OnHidden()
         {
             startButton.onClick.RemoveAllListeners();
             settingsButton.onClick.RemoveAllListeners();

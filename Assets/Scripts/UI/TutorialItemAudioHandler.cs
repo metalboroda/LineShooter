@@ -1,7 +1,7 @@
-using System.Collections;
-using Assets.Scripts.Audio;
+using System.Threading;
 using Assets.Scripts.EventBus;
 using Assets.Scripts.EventsFolder;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Assets.Scripts.UI
@@ -11,6 +11,7 @@ namespace Assets.Scripts.UI
         [SerializeField] private AudioClip audioClip;
 
         private AudioSource _audioSource;
+        private CancellationTokenSource _cts;
 
         private void OnEnable()
         {
@@ -22,24 +23,32 @@ namespace Assets.Scripts.UI
                 _audioSource.Play();
 
                 RaiseVoiceoverPlayedEvent(true);
-                StartCoroutine(WaitForClipToEnd());
+
+                _cts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+                
+                WaitForClipToEnd(_cts.Token).Forget();
             }
         }
 
         private void OnDisable()
         {
             RaiseVoiceoverPlayedEvent(false);
-            StopAllCoroutines();
+
+            _cts?.Cancel();
+            _cts?.Dispose();
+            _cts = null;
         }
 
-        private IEnumerator WaitForClipToEnd()
+        private async UniTaskVoid WaitForClipToEnd(CancellationToken token)
         {
             float waitTime = audioClip.length;
             float elapsed = 0f;
 
             while (elapsed < waitTime)
             {
-                yield return null;
+                bool wasCancelled = await UniTask.Yield(PlayerLoopTiming.Update, token).SuppressCancellationThrow();
+
+                if (wasCancelled) return;
 
                 elapsed += Time.deltaTime;
 

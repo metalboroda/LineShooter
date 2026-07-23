@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Assets.Scripts.Enums;
 using Assets.Scripts.EventBus;
 using Assets.Scripts.EventsFolder;
@@ -12,6 +14,8 @@ namespace Assets.Scripts.GameManagement
 		public IFiniteStateMachine<GameStateManager> Fsm { get; private set; }
 		public StateFactory<GameStateManager> StateFactory { get; private set; }
 
+		private Dictionary<UiButtonType, Func<IState<GameStateManager>>> _uiButtonStateMap;
+		
 		private EventBinding<UIEvents.UIButtonClicked> _uiButtonClicked;
 		private EventBinding<UIEvents.SelectorItemPlayPressed> _selectorItemPlayPressed;
 
@@ -21,6 +25,15 @@ namespace Assets.Scripts.GameManagement
 			StateFactory = new StateFactory<GameStateManager>(this);
 
 			Fsm.StateChanged += OnStateChanged;
+
+			_uiButtonStateMap = new Dictionary<UiButtonType, Func<IState<GameStateManager>>>
+			{
+				[UiButtonType.MainMenu] = StateFactory.GetState<GameMainMenuState>,
+				[UiButtonType.Pause] = StateFactory.GetState<GamePauseState>,
+				[UiButtonType.Restart] = StateFactory.GetState<GamePlayState>,
+				[UiButtonType.ResumeGame] = StateFactory.GetState<GamePlayState>,
+				[UiButtonType.NextLevel] = StateFactory.GetState<GameMainMenuState>,
+			};
 		}
 
 		private void OnEnable()
@@ -57,25 +70,9 @@ namespace Assets.Scripts.GameManagement
 
 		private void OnUiButtonClicked(UIEvents.UIButtonClicked eventData)
 		{
-			switch (eventData.ButtonType)
+			if (_uiButtonStateMap.TryGetValue(eventData.ButtonType, out Func<IState<GameStateManager>> getState))
 			{
-				case UiButtonType.Default:
-					break;
-				case UiButtonType.MainMenu:
-					Fsm.ChangeState(StateFactory.GetState<GameMainMenuState>());
-					break;
-				case UiButtonType.Pause:
-					Fsm.ChangeState(StateFactory.GetState<GamePauseState>());
-					break;
-				case UiButtonType.Restart:
-					Fsm.ChangeState(StateFactory.GetState<GamePlayState>());
-					break;
-				case UiButtonType.ResumeGame:
-					Fsm.ChangeState(StateFactory.GetState<GamePlayState>());
-					break;
-				case UiButtonType.NextLevel:
-					Fsm.ChangeState(StateFactory.GetState<GameMainMenuState>());
-					break;
+				Fsm.ChangeState(getState());
 			}
 		}
 

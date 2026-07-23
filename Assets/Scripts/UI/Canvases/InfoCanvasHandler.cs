@@ -6,12 +6,12 @@ using UnityEngine.UI;
 
 namespace Assets.Scripts.UI.Canvases
 {
-    public class InfoCanvasHandler : MonoBehaviour
+    public class InfoCanvasHandler : CanvasHandlerBase
     {
         [Header("Data")]
         [SerializeField] private Button backButton;
 
-        private void OnEnable()
+        protected override void OnShown()
         {
             backButton.onClick.AddListener(() =>
             {
@@ -22,7 +22,7 @@ namespace Assets.Scripts.UI.Canvases
             });
         }
 
-        private void OnDisable()
+        protected override void OnHidden()
         {
             backButton.onClick.RemoveAllListeners();
         }

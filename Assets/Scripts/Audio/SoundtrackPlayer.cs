@@ -1,6 +1,7 @@
-using System.Collections;
+using System.Threading;
 using Assets.Scripts.EventBus;
 using Assets.Scripts.EventsFolder;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Assets.Scripts.Audio
@@ -19,7 +20,7 @@ namespace Assets.Scripts.Audio
 		[SerializeField] private AudioSource audioSource;
 
 		private float _initVolume;
-		private Coroutine _volumeChangeCoroutine;
+		private CancellationTokenSource _volumeChangeCts;
 
 		private EventBinding<AudioEvents.VoiceoverPlayed> _voiceoverPlayed;
 
@@ -39,22 +40,22 @@ namespace Assets.Scripts.Audio
 			if (!audioSource)
 			{
 				Debug.LogError("Audio Source must be assigned!");
-				
+
 				enabled = false;
 				return;
 			}
 
 			_initVolume = audioSource.volume;
 
-			StartCoroutine(DoPlaySoundtracks());
+			DoPlaySoundtracks(this.GetCancellationTokenOnDestroy()).Forget();
 		}
 
-		private IEnumerator DoPlaySoundtracks()
+		private async UniTaskVoid DoPlaySoundtracks(CancellationToken token)
 		{
 			if (soundtrackClips == null || soundtrackClips.Length == 0)
 			{
 				Debug.LogWarning("Soundtrack clips array is empty. Stopping playback.");
-				yield break;
+				return;
 			}
 
 			while (true)
@@ -72,25 +73,29 @@ namespace Assets.Scripts.Audio
 					audioSource.clip = clipToPlay;
 					audioSource.Play();
 
-					yield return new WaitWhile(() => audioSource.isPlaying);
+					bool wasCancelled = await UniTask.WaitWhile(() => audioSource.isPlaying, cancellationToken: token)
+						.SuppressCancellationThrow();
+
+					if (wasCancelled) return;
 				}
 			}
 		}
 
 		private void OnVoiceoverPlayed(AudioEvents.VoiceoverPlayed eventData)
 		{
-			if (_volumeChangeCoroutine != null)
-			{
-				StopCoroutine(_volumeChangeCoroutine);
-			}
+			StopVolumeChangeInternal();
 
 			float targetVolume = eventData.IsVoiceoverPlayed ? reducedVolume : _initVolume;
 
 			if (audioSource && gameObject.activeInHierarchy)
-				_volumeChangeCoroutine = StartCoroutine(ChangeVolume(targetVolume, volumeChangeDuration));
+			{
+				_volumeChangeCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+				
+				ChangeVolume(targetVolume, volumeChangeDuration, _volumeChangeCts.Token).Forget();
+			}
 		}
 
-		private IEnumerator ChangeVolume(float targetVolume, float duration)
+		private async UniTaskVoid ChangeVolume(float targetVolume, float duration, CancellationToken token)
 		{
 			float currentTime = 0;
 			float startVolume = audioSource.volume;
@@ -100,12 +105,25 @@ namespace Assets.Scripts.Audio
 				currentTime += Time.unscaledDeltaTime;
 
 				audioSource.volume = Mathf.Lerp(startVolume, targetVolume, currentTime / duration);
-				yield return null;
+
+				bool wasCancelled = await UniTask.Yield(PlayerLoopTiming.Update, token).SuppressCancellationThrow();
+
+				if (wasCancelled) return;
 			}
 
 			audioSource.volume = targetVolume;
 
-			_volumeChangeCoroutine = null;
+			_volumeChangeCts = null;
+		}
+
+		private void StopVolumeChangeInternal()
+		{
+			if (_volumeChangeCts != null)
+			{
+				_volumeChangeCts.Cancel();
+				_volumeChangeCts.Dispose();
+				_volumeChangeCts = null;
+			}
 		}
 	}
 }

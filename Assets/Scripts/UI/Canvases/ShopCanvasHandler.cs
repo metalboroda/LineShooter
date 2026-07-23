@@ -10,7 +10,7 @@ using UnityEngine.UI;
 
 namespace Assets.Scripts.UI.Canvases
 {
-	public class ShopCanvasHandler : MonoBehaviour
+	public class ShopCanvasHandler : CanvasHandlerBase
 	{
 		[Header("Data")]
 		[SerializeField] private CoinDataSo coinData;
@@ -46,7 +46,7 @@ namespace Assets.Scripts.UI.Canvases
 			_totalPages = Mathf.CeilToInt((float)ShopItems.Length / ItemsPerPage);
 		}
 
-		private void OnEnable()
+		protected override void OnShown()
 		{
 			backButton.onClick.AddListener(OnBackButtonClicked);
 			nextButton.onClick.AddListener(OnNextButtonClicked);
@@ -60,7 +60,7 @@ namespace Assets.Scripts.UI.Canvases
 			SpawnShopItems();
 		}
 
-		private void OnDisable()
+		protected override void OnHidden()
 		{
 			backButton.onClick.RemoveAllListeners();
 			nextButton.onClick.RemoveAllListeners();
@@ -72,6 +72,8 @@ namespace Assets.Scripts.UI.Canvases
 
 		private void Update()
 		{
+			if (!IsVisible) return;
+
 			coinCounterText.text = coinData.CoinAmount.ToString();
 		}
 

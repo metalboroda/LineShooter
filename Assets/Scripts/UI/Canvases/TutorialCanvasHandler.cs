@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace Assets.Scripts.UI.Canvases
 {
-	public class TutorialCanvasHandler : MonoBehaviour
+	public class TutorialCanvasHandler : CanvasHandlerBase
 	{
 		[Header("Objects")]
 		[SerializeField] private GameObject[] tutorialObjects;
@@ -11,7 +11,7 @@ namespace Assets.Scripts.UI.Canvases
 		[Header("References")]
 		[SerializeField] private Button skipTutorialButton;
 		[Space]
-		[SerializeField] private GameObject gameCanvas;
+		[SerializeField] private CanvasHandlerBase gameCanvas;
 
 		private int _currentTutorialIndex;
 
@@ -23,7 +23,7 @@ namespace Assets.Scripts.UI.Canvases
 			}
 		}
 
-		private void OnEnable()
+		protected override void OnShown()
 		{
 			skipTutorialButton.onClick.AddListener(HandleSkipTutorial);
 
@@ -31,11 +31,13 @@ namespace Assets.Scripts.UI.Canvases
 
 			ActivateTutorialObject(_currentTutorialIndex);
 
-			gameCanvas.SetActive(false);
+			gameCanvas.Hide();
 		}
 
-		private void OnDisable()
+		protected override void OnHidden()
 		{
+			skipTutorialButton.onClick.RemoveListener(HandleSkipTutorial);
+
 			Time.timeScale = 1f;
 		}
 
@@ -73,10 +75,9 @@ namespace Assets.Scripts.UI.Canvases
 
 		private void CompleteTutorial()
 		{
-			Time.timeScale = 1f;
+			gameCanvas.Show();
 
-			gameCanvas.SetActive(true);
-			gameObject.SetActive(false);
+			Hide();
 		}
 	}
 }

@@ -1,4 +1,6 @@
-using System.Collections;
+using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -6,7 +8,8 @@ namespace Assets.Scripts.Components
 {
     public class AudioPlayerComponent
     {
-        private Coroutine _currentCoroutine;
+        private CancellationTokenSource _currentCts;
+        
         private AudioSource _audioSource;
         private MonoBehaviour _monoBehaviour;
 
@@ -31,7 +34,9 @@ namespace Assets.Scripts.Components
 
                 StopCurrentTask();
 
-                _currentCoroutine = _monoBehaviour.StartCoroutine(PlayWithDelay(clip, delay.Value, oneShot, randomPitch));
+                _currentCts = CancellationTokenSource.CreateLinkedTokenSource(_monoBehaviour.GetCancellationTokenOnDestroy());
+                
+                PlayWithDelay(clip, delay.Value, oneShot, randomPitch, _currentCts.Token).Forget();
             }
             else
             {
@@ -50,7 +55,9 @@ namespace Assets.Scripts.Components
 
                 StopCurrentTask();
 
-                _currentCoroutine = _monoBehaviour.StartCoroutine(PlayMultipleWithDelay(clips, delay.Value, oneShot, randomPitch));
+                _currentCts = CancellationTokenSource.CreateLinkedTokenSource(_monoBehaviour.GetCancellationTokenOnDestroy());
+                
+                PlayMultipleWithDelay(clips, delay.Value, oneShot, randomPitch, _currentCts.Token).Forget();
             }
             else
             {
@@ -87,20 +94,19 @@ namespace Assets.Scripts.Components
 
         private void StopCurrentTask()
         {
-            if (_currentCoroutine != null && _monoBehaviour != null)
+            if (_currentCts != null)
             {
-                _monoBehaviour.StopCoroutine(_currentCoroutine);
-                
-                _currentCoroutine = null;
+                _currentCts.Cancel();
+                _currentCts.Dispose();
+
+                _currentCts = null;
             }
         }
 
         private void SetRandomPitch(float minPitch = 0.95f, float maxPitch = 1.05f)
         {
             if (_audioSource)
-            {
                 _audioSource.pitch = Random.Range(minPitch, maxPitch);
-            }
         }
 
         private void PlayAudioClip(AudioClip clip, bool oneShot)
@@ -116,20 +122,27 @@ namespace Assets.Scripts.Components
             }
         }
 
-        private IEnumerator PlayWithDelay(AudioClip clip, float delay, bool oneShot, bool randomPitch)
+        private async UniTaskVoid PlayWithDelay(AudioClip clip, float delay, bool oneShot, bool randomPitch, CancellationToken token)
         {
-            yield return new WaitForSeconds(delay);
+            bool wasCancelled = await UniTask.Delay(TimeSpan.FromSeconds(delay), cancellationToken: token)
+                .SuppressCancellationThrow();
+
+            if (wasCancelled) return;
 
             if (randomPitch) SetRandomPitch();
 
             PlayAudioClip(clip, oneShot);
 
-            _currentCoroutine = null;
+            _currentCts?.Dispose();
+            _currentCts = null;
         }
 
-        private IEnumerator PlayMultipleWithDelay(AudioClip[] clips, float delay, bool oneShot, bool randomPitch)
+        private async UniTaskVoid PlayMultipleWithDelay(AudioClip[] clips, float delay, bool oneShot, bool randomPitch, CancellationToken token)
         {
-            yield return new WaitForSeconds(delay);
+            bool wasCancelled = await UniTask.Delay(TimeSpan.FromSeconds(delay), cancellationToken: token)
+                .SuppressCancellationThrow();
+
+            if (wasCancelled) return;
 
             foreach (AudioClip clip in clips)
             {
@@ -141,7 +154,8 @@ namespace Assets.Scripts.Components
                 }
             }
 
-            _currentCoroutine = null;
+            _currentCts?.Dispose();
+            _currentCts = null;
         }
     }
 }

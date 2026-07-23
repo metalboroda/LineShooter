@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace Assets.Scripts.UI.Canvases
 {
-    public class SettingsCanvasHandler : MonoBehaviour
+    public class SettingsCanvasHandler : CanvasHandlerBase
     {
         [Header("References")]
         [SerializeField] private Button backButton;
@@ -22,7 +22,7 @@ namespace Assets.Scripts.UI.Canvases
 
         private SettingsSave _settings;
 
-        private void OnEnable()
+        protected override void OnShown()
         {
             LoadSettings();
 
@@ -38,7 +38,7 @@ namespace Assets.Scripts.UI.Canvases
             sfxButton.onClick.AddListener(ToggleSfx);
         }
 
-        private void OnDisable()
+        protected override void OnHidden()
         {
             backButton.onClick.RemoveAllListeners();
             musicButton.onClick.RemoveAllListeners();

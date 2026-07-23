@@ -1,4 +1,6 @@
-using System.Collections;
+using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -13,12 +15,15 @@ namespace Assets.Scripts.UI.Canvases
 
         private void Awake()
         {
-            StartCoroutine(DoLoadGameScene());
+            DoLoadGameScene(this.GetCancellationTokenOnDestroy()).Forget();
         }
 
-        private IEnumerator DoLoadGameScene()
+        private async UniTaskVoid DoLoadGameScene(CancellationToken token)
         {
-            yield return new WaitForSeconds(gameSceneDelay);
+            bool wasCancelled = await UniTask.Delay(TimeSpan.FromSeconds(gameSceneDelay), cancellationToken: token)
+                .SuppressCancellationThrow();
+
+            if (wasCancelled) return;
 
             SceneManager.LoadScene(gameSceneName);
         }

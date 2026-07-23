@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace Assets.Scripts.UI.Canvases
 {
-    public class GameCanvasHandler : MonoBehaviour
+    public class GameCanvasHandler : CanvasHandlerBase
     {
         [Header("Data")]
         [SerializeField] private CoinDataSo coinData;
@@ -28,7 +28,7 @@ namespace Assets.Scripts.UI.Canvases
         [Header("References")]
         [SerializeField] private Button pauseButton;
 
-        private void OnEnable()
+        protected override void OnShown()
         {
             pauseButton.onClick.AddListener(() =>
             {
@@ -43,7 +43,7 @@ namespace Assets.Scripts.UI.Canvases
             coinCounterText.text = coinData.CoinAmount.ToString();
         }
 
-        private void OnDisable()
+        protected override void OnHidden()
         {
             pauseButton.onClick.RemoveAllListeners();
 

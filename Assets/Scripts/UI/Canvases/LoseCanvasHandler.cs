@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace Assets.Scripts.UI.Canvases
 {
-    public class LoseCanvasHandler : MonoBehaviour
+    public class LoseCanvasHandler : CanvasHandlerBase
     {
         [Header("Data")]
         [SerializeField] private LevelDataSo levelData;
@@ -20,7 +20,7 @@ namespace Assets.Scripts.UI.Canvases
         [SerializeField] private Button mainMenuButton;
         [SerializeField] private Button restartButton;
 
-        private void OnEnable()
+        protected override void OnShown()
         {
             restartButton.onClick.AddListener(() =>
             {
@@ -39,7 +39,7 @@ namespace Assets.Scripts.UI.Canvases
             });
         }
 
-        private void OnDisable()
+        protected override void OnHidden()
         {
             restartButton.onClick.RemoveAllListeners();
             mainMenuButton.onClick.RemoveAllListeners();
@@ -47,6 +47,8 @@ namespace Assets.Scripts.UI.Canvases
 
         private void Update()
         {
+            if (!IsVisible) return;
+
             coinCounterText.text = coinData.CoinAmount.ToString();
         }
     }

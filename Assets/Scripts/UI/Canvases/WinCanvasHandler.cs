@@ -1,14 +1,15 @@
-using System.Collections;
+using System.Threading;
 using Assets.Scripts.Enums;
 using Assets.Scripts.EventBus;
 using Assets.Scripts.EventsFolder;
 using Assets.Scripts.ScriptableObjects.Infrastructure;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Assets.Scripts.UI.Canvases
 {
-	public class WinCanvasHandler : MonoBehaviour
+	public class WinCanvasHandler : CanvasHandlerBase
 	{
 		[Header("Data")]
 		[SerializeField] private LevelDataSo levelData;
@@ -24,7 +25,7 @@ namespace Assets.Scripts.UI.Canvases
 		[Space]
 		[SerializeField] private GameObject[] stars;
 
-		private void OnEnable()
+		protected override void OnShown()
 		{
 			nextLevelButton.onClick.AddListener(() => {
 				EventBus<UIEvents.UIButtonClicked>.Raise(new UIEvents.UIButtonClicked
@@ -47,10 +48,10 @@ namespace Assets.Scripts.UI.Canvases
 				});
 			});
 
-			StartCoroutine(DoSetRating(levelData.CurrentLevelRating));
+			DoSetRating(levelData.CurrentLevelRating, this.GetCancellationTokenOnDestroy()).Forget();
 		}
 
-		private void OnDisable()
+		protected override void OnHidden()
 		{
 			nextLevelButton.onClick.RemoveAllListeners();
 			mainMenuButton.onClick.RemoveAllListeners();
@@ -59,14 +60,18 @@ namespace Assets.Scripts.UI.Canvases
 
 		private void Update()
 		{
+			if (!IsVisible) return;
+
 			coinCounterText.text = coinData.CoinAmount.ToString();
 		}
 
-		private IEnumerator DoSetRating(int rating)
+		private async UniTaskVoid DoSetRating(int rating, CancellationToken token)
 		{
-			yield return null;
+			bool wasCancelled = await UniTask.Yield(PlayerLoopTiming.Update, token).SuppressCancellationThrow();
 
-			if (stars.Length == 0) yield break;
+			if (wasCancelled) return;
+
+			if (stars.Length == 0) return;
 
 			const int maxRating = 3;
 

@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 namespace Assets.Scripts.UI.Canvases
 {
-	public class LevelSelectorCanvasHandler : MonoBehaviour
+	public class LevelSelectorCanvasHandler : CanvasHandlerBase
 	{
 		[Header("Settings")]
 		[SerializeField] private bool unlockAllLevels;
@@ -37,7 +37,7 @@ namespace Assets.Scripts.UI.Canvases
 			_totalPages = Mathf.CeilToInt((float)LevelSelectorItems.Length / itemsPerPage);
 		}
 
-		private void OnEnable()
+		protected override void OnShown()
 		{
 			backButton.onClick.AddListener(OnBackButtonClicked);
 			nextButton.onClick.AddListener(OnNextButtonClicked);
@@ -51,7 +51,7 @@ namespace Assets.Scripts.UI.Canvases
 			SpawnItems();
 		}
 
-		private void OnDisable()
+		protected override void OnHidden()
 		{
 			backButton.onClick.RemoveListener(OnBackButtonClicked);
 			nextButton.onClick.RemoveListener(OnNextButtonClicked);

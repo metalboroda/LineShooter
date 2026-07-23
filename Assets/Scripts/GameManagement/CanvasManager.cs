@@ -1,11 +1,13 @@
-using System.Collections;
+using System;
 using System.Collections.Generic;
+using System.Threading;
 using Assets.Scripts.Enums;
 using Assets.Scripts.EventBus;
 using Assets.Scripts.EventsFolder;
 using Assets.Scripts.GameManagement.GameStates;
 using Assets.Scripts.SaveSystem;
 using Assets.Scripts.UI.Canvases;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Assets.Scripts.GameManagement
@@ -13,21 +15,24 @@ namespace Assets.Scripts.GameManagement
 	public class CanvasManager : MonoBehaviour
 	{
 		[Header("Canvases")]
-		[SerializeField] private GameObject mainMenuCanvas;
-		[SerializeField] private GameObject infoCanvas;
-		[SerializeField] private GameObject settingsCanvas;
-		[SerializeField] private GameObject shopCanvas;
-		[SerializeField] private GameObject levelSelectorCanvas;
-		[SerializeField] private GameObject gameCanvas;
-		[SerializeField] private GameObject pauseCanvas;
-		[SerializeField] private GameObject winCanvas;
-		[SerializeField] private GameObject loseCanvas;
-		[SerializeField] private GameObject tutorialCanvas;
+		[SerializeField] private CanvasHandlerBase mainMenuCanvas;
+		[SerializeField] private CanvasHandlerBase infoCanvas;
+		[SerializeField] private CanvasHandlerBase settingsCanvas;
+		[SerializeField] private CanvasHandlerBase shopCanvas;
+		[SerializeField] private CanvasHandlerBase levelSelectorCanvas;
+		[SerializeField] private CanvasHandlerBase gameCanvas;
+		[SerializeField] private CanvasHandlerBase pauseCanvas;
+		[SerializeField] private CanvasHandlerBase winCanvas;
+		[SerializeField] private CanvasHandlerBase loseCanvas;
+		[SerializeField] private CanvasHandlerBase tutorialCanvas;
 
-		private readonly List<GameObject> _canvases = new();
-		private GameObject _currentCanvas;
-		private GameObject _previousCanvas;
-
+		private readonly List<CanvasHandlerBase> _canvases = new List<CanvasHandlerBase>();
+		private CanvasHandlerBase _currentCanvas;
+		private CanvasHandlerBase _previousCanvas;
+		private Dictionary<Type, Action> _gameStateHandlers;
+		private Dictionary<UiButtonType, Action> _uiButtonHandlers;
+		private CancellationTokenSource _switchCanvasCts;
+		
 		private EventBinding<GameEvents.GameStateChanged> _gameStateChanged;
 		private EventBinding<UIEvents.UIButtonClicked> _uiButtonClicked;
 
@@ -35,7 +40,7 @@ namespace Assets.Scripts.GameManagement
 		{
 			AddCanvasesToList();
 
-			tutorialCanvas.GetComponent<TutorialCanvasHandler>();
+			BuildHandlerMaps();
 		}
 
 		private void OnEnable()
@@ -52,6 +57,51 @@ namespace Assets.Scripts.GameManagement
 			EventBus<UIEvents.UIButtonClicked>.Unregister(_uiButtonClicked);
 		}
 
+		private void OnDestroy()
+		{
+			StopSwitchCanvasWithDelayInternal();
+		}
+
+		private void BuildHandlerMaps()
+		{
+			_gameStateHandlers = new Dictionary<Type, Action>
+			{
+				[typeof(GameMainMenuState)] = () => SwitchCanvas(mainMenuCanvas),
+				[typeof(GamePreviewState)] = DisableAllCanvases,
+				[typeof(GamePlayState)] = () =>
+				{
+					SwitchCanvas(gameCanvas);
+					EnableTutorialCanvas();
+				},
+				[typeof(GamePauseState)] = () => SwitchCanvas(pauseCanvas),
+				[typeof(GameWinState)] = () => SwitchCanvas(winCanvas),
+				[typeof(GameLoseState)] = () => SwitchCanvas(loseCanvas),
+			};
+
+			_uiButtonHandlers = new Dictionary<UiButtonType, Action>
+			{
+				[UiButtonType.Info] = () => SwitchCanvas(infoCanvas),
+				[UiButtonType.Settings] = () => SwitchCanvas(settingsCanvas),
+				[UiButtonType.Shop] = () => SwitchCanvas(shopCanvas),
+				[UiButtonType.LevelSelector] = () =>
+				{
+					DisableAllCanvases();
+					SwitchCanvas(levelSelectorCanvas);
+				},
+				[UiButtonType.Back] = () => SwitchCanvas(_previousCanvas),
+				[UiButtonType.Restart] = () =>
+				{
+					DisableAllCanvases();
+					SwitchCanvas(gameCanvas);
+				},
+				[UiButtonType.NextLevel] = () =>
+				{
+					DisableAllCanvases();
+					SwitchCanvasWithDelay(levelSelectorCanvas, 0.01f);
+				},
+			};
+		}
+
 		private void AddCanvasesToList()
 		{
 			_canvases.Add(mainMenuCanvas);
@@ -65,69 +115,22 @@ namespace Assets.Scripts.GameManagement
 			_canvases.Add(loseCanvas);
 			_canvases.Add(tutorialCanvas);
 
-			foreach (GameObject canvas in _canvases)
+			foreach (CanvasHandlerBase canvas in _canvases)
 			{
-				canvas.SetActive(false);
+				canvas.Hide();
 			}
 		}
 
 		private void OnGameStateChanged(GameEvents.GameStateChanged eventData)
 		{
-			switch (eventData.State)
-			{
-				case GameMainMenuState:
-					SwitchCanvas(mainMenuCanvas);
-					break;
-				case GamePreviewState:
-					DisableAllCanvases();
-					break;
-				case GamePlayState:
-					SwitchCanvas(gameCanvas);
-					EnableTutorialCanvas();
-					break;
-				case GamePauseState:
-					SwitchCanvas(pauseCanvas);
-					break;
-				case GameWinState:
-					SwitchCanvas(winCanvas);
-					break;
-				case GameLoseState:
-					SwitchCanvas(loseCanvas);
-					break;
-			}
+			if (_gameStateHandlers.TryGetValue(eventData.State.GetType(), out Action handler))
+				handler();
 		}
 
 		private void OnUiButtonClicked(UIEvents.UIButtonClicked eventData)
 		{
-			switch (eventData.ButtonType)
-			{
-				case UiButtonType.Default:
-					break;
-				case UiButtonType.Info:
-					SwitchCanvas(infoCanvas);
-					break;
-				case UiButtonType.Settings:
-					SwitchCanvas(settingsCanvas);
-					break;
-				case UiButtonType.Shop:
-					SwitchCanvas(shopCanvas);
-					break;
-				case UiButtonType.LevelSelector:
-					DisableAllCanvases();
-					SwitchCanvas(levelSelectorCanvas);
-					break;
-				case UiButtonType.Back:
-					SwitchCanvas(_previousCanvas);
-					break;
-				case UiButtonType.Restart:
-					DisableAllCanvases();
-					SwitchCanvas(gameCanvas);
-					break;
-				case UiButtonType.NextLevel:
-					DisableAllCanvases();
-					SwitchCanvasWithDelay(levelSelectorCanvas, 0.01f);
-					break;
-			}
+			if (_uiButtonHandlers.TryGetValue(eventData.ButtonType, out Action handler))
+				handler();
 		}
 
 		private void EnableTutorialCanvas()
@@ -136,20 +139,22 @@ namespace Assets.Scripts.GameManagement
 
 			if (settings.tutorialShown) return;
 
-			tutorialCanvas.SetActive(true);
+			tutorialCanvas.Show();
 
 			settings.SaveTutorialShown(true);
 
 			SaveManager.SaveSettings(settings);
 		}
 
-		private void SwitchCanvas(GameObject newCanvas)
+		private void SwitchCanvas(CanvasHandlerBase newCanvas)
 		{
+			if (newCanvas is null) return;
+
 			if (_currentCanvas == newCanvas)
 			{
-				if (!newCanvas.activeSelf)
+				if (!newCanvas.IsVisible)
 				{
-					newCanvas.SetActive(true);
+					newCanvas.Show();
 
 					EventBus<UIEvents.CanvasChanged>.Raise(new UIEvents.CanvasChanged());
 				}
@@ -159,34 +164,52 @@ namespace Assets.Scripts.GameManagement
 
 			if (_currentCanvas is not null) _previousCanvas = _currentCanvas;
 
-			foreach (GameObject canvas in _canvases)
+			foreach (CanvasHandlerBase canvas in _canvases)
 			{
-				canvas.SetActive(false);
+				canvas.Hide();
 			}
 
 			_currentCanvas = newCanvas;
 
-			newCanvas.SetActive(true);
+			newCanvas.Show();
 
 			EventBus<UIEvents.CanvasChanged>.Raise(new UIEvents.CanvasChanged());
 		}
 
-		public void SwitchCanvasWithDelay(GameObject newCanvas, float delay)
+		private void SwitchCanvasWithDelay(CanvasHandlerBase newCanvas, float delay)
 		{
-			StartCoroutine(DoSwitchCanvasWithDelay(newCanvas, delay));
+			StopSwitchCanvasWithDelayInternal();
+
+			_switchCanvasCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+			
+			DoSwitchCanvasWithDelay(newCanvas, delay, _switchCanvasCts.Token).Forget();
 		}
 
-		private IEnumerator DoSwitchCanvasWithDelay(GameObject newCanvas, float delay)
+		private async UniTaskVoid DoSwitchCanvasWithDelay(CanvasHandlerBase newCanvas, float delay, CancellationToken token)
 		{
-			yield return new WaitForSeconds(delay);
+			bool wasCancelled = await UniTask.Delay(TimeSpan.FromSeconds(delay), cancellationToken: token)
+				.SuppressCancellationThrow();
+
+			if (wasCancelled) return;
+
 			SwitchCanvas(newCanvas);
+		}
+
+		private void StopSwitchCanvasWithDelayInternal()
+		{
+			if (_switchCanvasCts != null)
+			{
+				_switchCanvasCts.Cancel();
+				_switchCanvasCts.Dispose();
+				_switchCanvasCts = null;
+			}
 		}
 
 		private void DisableAllCanvases()
 		{
-			foreach (GameObject canvas in _canvases)
+			foreach (CanvasHandlerBase canvas in _canvases)
 			{
-				canvas.SetActive(false);
+				canvas.Hide();
 			}
 		}
 	}
