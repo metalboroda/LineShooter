@@ -31,12 +31,12 @@ namespace Assets.Scripts.UI
 
 		private ShopCanvasHandler _shopCanvasHandler;
 
-		private EventBinding<Events.BuyResponse> _buyResponse;
+		private EventBinding<CurrencyEvents.BuyResponse> _buyResponse;
 
 		private void OnEnable()
 		{
-			_buyResponse = new EventBinding<Events.BuyResponse>(OnBuyResponse);
-			EventBus<Events.BuyResponse>.Register(_buyResponse);
+			_buyResponse = new EventBinding<CurrencyEvents.BuyResponse>(OnBuyResponse);
+			EventBus<CurrencyEvents.BuyResponse>.Register(_buyResponse);
 
 			buyButton.onClick.AddListener(BuyItem);
 			selectButton.onClick.AddListener(SelectItem);
@@ -46,7 +46,7 @@ namespace Assets.Scripts.UI
 
 		private void OnDisable()
 		{
-			EventBus<Events.BuyResponse>.Unregister(_buyResponse);
+			EventBus<CurrencyEvents.BuyResponse>.Unregister(_buyResponse);
 
 			buyButton.onClick.RemoveAllListeners();
 			selectButton.onClick.RemoveAllListeners();
@@ -61,7 +61,6 @@ namespace Assets.Scripts.UI
 		public ShopItemHandler SetPrice(int price)
 		{
 			_price = price;
-
 			priceText.text = price.ToString();
 
 			UpdateBuyButtonState();
@@ -111,7 +110,7 @@ namespace Assets.Scripts.UI
 
 		private void BuyItem()
 		{
-			EventBus<Events.BuyRequest>.Raise(new Events.BuyRequest
+			EventBus<CurrencyEvents.BuyRequest>.Raise(new CurrencyEvents.BuyRequest
 			{
 				RequestName = _itemName,
 				Price = _price
@@ -131,12 +130,10 @@ namespace Assets.Scripts.UI
 			_shopCanvasHandler.PurchaseItem(_shopItemConfig);
 		}
 
-		private void OnBuyResponse(Events.BuyResponse buyResponse)
+		private void OnBuyResponse(CurrencyEvents.BuyResponse eventData)
 		{
-			if (buyResponse.ResponseName == _itemName && buyResponse.Response)
-			{
+			if (eventData.ResponseName == _itemName && eventData.Response)
 				UnlockItem();
-			}
 		}
 
 		private void SelectItem()

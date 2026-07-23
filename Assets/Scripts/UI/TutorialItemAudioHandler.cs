@@ -1,5 +1,7 @@
 using System.Collections;
+using Assets.Scripts.Audio;
 using Assets.Scripts.EventBus;
+using Assets.Scripts.EventsFolder;
 using UnityEngine;
 
 namespace Assets.Scripts.UI
@@ -53,7 +55,7 @@ namespace Assets.Scripts.UI
 
         private void RaiseVoiceoverPlayedEvent(bool isVoiceoverPlayed)
         {
-            EventBus<Events.VoiceoverPlayed>.Raise(new Events.VoiceoverPlayed
+            EventBus<AudioEvents.VoiceoverPlayed>.Raise(new AudioEvents.VoiceoverPlayed
             {
                 IsVoiceoverPlayed = isVoiceoverPlayed
             });

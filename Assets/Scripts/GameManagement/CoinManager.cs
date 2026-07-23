@@ -20,8 +20,8 @@ namespace Assets.Scripts.GameManagement
 
 		private CoinSave _coinSave;
 
-		private EventBinding<Events.BuyRequest> _buyRequest;
-		private EventBinding<Events.CoinIncreased> _coinIncreased;
+		private EventBinding<CurrencyEvents.BuyRequest> _buyRequest;
+		private EventBinding<CurrencyEvents.CoinIncreased> _coinIncreased;
 		private EventBinding<UIEvents.CanvasChanged> _canvasChanged;
 		private EventBinding<UIEvents.UIButtonClicked> _uiButtonClicked;
 
@@ -42,10 +42,10 @@ namespace Assets.Scripts.GameManagement
 
 		private void OnEnable()
 		{
-			_buyRequest = new EventBinding<Events.BuyRequest>(OnBuyRequest);
-			EventBus<Events.BuyRequest>.Register(_buyRequest);
-			_coinIncreased = new EventBinding<Events.CoinIncreased>(OnCoinIncreased);
-			EventBus<Events.CoinIncreased>.Register(_coinIncreased);
+			_buyRequest = new EventBinding<CurrencyEvents.BuyRequest>(OnBuyRequest);
+			EventBus<CurrencyEvents.BuyRequest>.Register(_buyRequest);
+			_coinIncreased = new EventBinding<CurrencyEvents.CoinIncreased>(OnCoinIncreased);
+			EventBus<CurrencyEvents.CoinIncreased>.Register(_coinIncreased);
 			_canvasChanged = new EventBinding<UIEvents.CanvasChanged>(OnCanvasChanged);
 			EventBus<UIEvents.CanvasChanged>.Register(_canvasChanged);
 			_uiButtonClicked = new EventBinding<UIEvents.UIButtonClicked>(OnUiButtonClicked);
@@ -54,37 +54,35 @@ namespace Assets.Scripts.GameManagement
 
 		private void OnDisable()
 		{
-			EventBus<Events.BuyRequest>.Unregister(_buyRequest);
-			EventBus<Events.CoinIncreased>.Unregister(_coinIncreased);
+			EventBus<CurrencyEvents.BuyRequest>.Unregister(_buyRequest);
+			EventBus<CurrencyEvents.CoinIncreased>.Unregister(_coinIncreased);
 			EventBus<UIEvents.CanvasChanged>.Unregister(_canvasChanged);
 			EventBus<UIEvents.UIButtonClicked>.Unregister(_uiButtonClicked);
 		}
 
-		private void OnBuyRequest(Events.BuyRequest buyRequest)
+		private void OnBuyRequest(CurrencyEvents.BuyRequest eventData)
 		{
-			if (buyRequest.Price > _coinAmount) return;
+			if (eventData.Price > _coinAmount) return;
 
-			EventBus<Events.BuyResponse>.Raise(new Events.BuyResponse
+			EventBus<CurrencyEvents.BuyResponse>.Raise(new CurrencyEvents.BuyResponse
 			{
-				ResponseName = buyRequest.RequestName,
+				ResponseName = eventData.RequestName,
 				Response = true
 			});
 
-			_coinAmount -= buyRequest.Price;
+			_coinAmount -= eventData.Price;
 
 			if (_coinAmount < 0)
-			{
 				_coinAmount = 0;
-			}
 
 			coinDataSo.CoinAmount = _coinAmount;
 
 			SaveCoins();
 		}
 
-		private void OnCoinIncreased(Events.CoinIncreased coinIncreased)
+		private void OnCoinIncreased(CurrencyEvents.CoinIncreased eventData)
 		{
-			coinDataSo.CoinAmount += coinIncreased.CoinAmount;
+			coinDataSo.CoinAmount += eventData.CoinAmount;
 			_coinAmount = coinDataSo.CoinAmount;
 		}
 
