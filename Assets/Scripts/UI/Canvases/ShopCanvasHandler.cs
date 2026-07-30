@@ -6,6 +6,7 @@ using Assets.Scripts.SaveSystem;
 using Assets.Scripts.ScriptableObjects.Infrastructure;
 using Assets.Scripts.ScriptableObjects.Shop;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Assets.Scripts.UI.Canvases
@@ -56,6 +57,7 @@ namespace Assets.Scripts.UI.Canvases
 
 			_currentPage = GetPageForSelectedItem();
 
+			ClearSelection();
 			UpdatePaginationButtons();
 			SpawnShopItems();
 		}
@@ -93,6 +95,7 @@ namespace Assets.Scripts.UI.Canvases
 
 			_currentPage++;
 
+			ClearSelection();
 			SpawnShopItems();
 			UpdatePaginationButtons();
 
@@ -105,10 +108,17 @@ namespace Assets.Scripts.UI.Canvases
 
 			_currentPage--;
 
+			ClearSelection();
 			SpawnShopItems();
 			UpdatePaginationButtons();
 
 			EventBus<UIEvents.UIButtonClicked>.Raise(new UIEvents.UIButtonClicked());
+		}
+
+		private static void ClearSelection()
+		{
+			if (EventSystem.current != null)
+				EventSystem.current.SetSelectedGameObject(null);
 		}
 
 		private int GetPageForSelectedItem()

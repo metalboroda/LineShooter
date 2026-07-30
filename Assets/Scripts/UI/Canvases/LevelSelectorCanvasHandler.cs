@@ -5,6 +5,7 @@ using Assets.Scripts.EventsFolder;
 using Assets.Scripts.SaveSystem;
 using Assets.Scripts.ScriptableObjects.LevelSelector;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Assets.Scripts.UI.Canvases
@@ -47,6 +48,7 @@ namespace Assets.Scripts.UI.Canvases
 
 			_currentPage = unlockAllLevels ? 0 : GetPageOfLastUnlockedLevel();
 
+			ClearSelection();
 			UpdatePaginationButtons();
 			SpawnItems();
 		}
@@ -87,6 +89,7 @@ namespace Assets.Scripts.UI.Canvases
 			{
 				_currentPage++;
 
+				ClearSelection();
 				SpawnItems();
 				UpdatePaginationButtons();
 
@@ -100,11 +103,18 @@ namespace Assets.Scripts.UI.Canvases
 			{
 				_currentPage--;
 
+				ClearSelection();
 				SpawnItems();
 				UpdatePaginationButtons();
 
 				EventBus<UIEvents.UIButtonClicked>.Raise(new UIEvents.UIButtonClicked());
 			}
+		}
+
+		private static void ClearSelection()
+		{
+			if (EventSystem.current)
+				EventSystem.current.SetSelectedGameObject(null);
 		}
 
 		private void UpdatePaginationButtons()
