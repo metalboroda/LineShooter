@@ -21,9 +21,5 @@ namespace Assets.Scripts.EventsFolder
 		public struct UiMusicClicked : IEvent {}
 
 		public struct UiSfxClicked : IEvent {}
-
-		public struct VibrationClicked : IEvent {}
-
-		public struct TutorialCompleted : IEvent {}
 	}
 }

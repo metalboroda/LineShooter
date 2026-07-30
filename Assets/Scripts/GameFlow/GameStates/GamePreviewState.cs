@@ -1,4 +1,4 @@
-namespace Assets.Scripts.GameManagement.GameStates
+namespace Assets.Scripts.GameFlow.GameStates
 {
     public class GamePreviewState : GameBaseState { }
 }

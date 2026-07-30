@@ -6,14 +6,14 @@ using Assets.Scripts.ScriptableObjects.Infrastructure;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using Zenject;
 
 namespace Assets.Scripts.UI.Canvases
 {
 	public class WinCanvasHandler : CanvasHandlerBase
 	{
-		[Header("Data")]
-		[SerializeField] private LevelDataSo levelData;
-		[SerializeField] private CoinDataSo coinData;
+		[Inject] private LevelDataSo _levelData;
+		[Inject] private CoinDataSo _coinData;
 
 		[Header("Coin Counter")]
 		[SerializeField] private Text coinCounterText;
@@ -48,7 +48,7 @@ namespace Assets.Scripts.UI.Canvases
 				});
 			});
 
-			DoSetRating(levelData.CurrentLevelRating, this.GetCancellationTokenOnDestroy()).Forget();
+			DoSetRating(_levelData.CurrentLevelRating, this.GetCancellationTokenOnDestroy()).Forget();
 		}
 
 		protected override void OnHidden()
@@ -62,7 +62,7 @@ namespace Assets.Scripts.UI.Canvases
 		{
 			if (!IsVisible) return;
 
-			coinCounterText.text = coinData.CoinAmount.ToString();
+			coinCounterText.text = _coinData.CoinAmount.ToString();
 		}
 
 		private async UniTaskVoid DoSetRating(int rating, CancellationToken token)

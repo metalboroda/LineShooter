@@ -4,16 +4,19 @@ using System.Threading;
 using Assets.Scripts.Enums;
 using Assets.Scripts.EventBus;
 using Assets.Scripts.EventsFolder;
-using Assets.Scripts.GameManagement.GameStates;
+using Assets.Scripts.GameFlow.GameStates;
 using Assets.Scripts.SaveSystem;
 using Assets.Scripts.UI.Canvases;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using Zenject;
 
 namespace Assets.Scripts.GameManagement
 {
 	public class CanvasManager : MonoBehaviour
 	{
+		[Inject] private ISaveService _saveService;
+
 		[Header("Canvases")]
 		[SerializeField] private CanvasHandlerBase mainMenuCanvas;
 		[SerializeField] private CanvasHandlerBase infoCanvas;
@@ -135,7 +138,7 @@ namespace Assets.Scripts.GameManagement
 
 		private void EnableTutorialCanvas()
 		{
-			SettingsSave settings = SaveManager.LoadSettings();
+			SettingsSave settings = _saveService.LoadSettings();
 
 			if (settings.tutorialShown) return;
 
@@ -143,7 +146,7 @@ namespace Assets.Scripts.GameManagement
 
 			settings.SaveTutorialShown(true);
 
-			SaveManager.SaveSettings(settings);
+			_saveService.SaveSettings(settings);
 		}
 
 		private void SwitchCanvas(CanvasHandlerBase newCanvas)

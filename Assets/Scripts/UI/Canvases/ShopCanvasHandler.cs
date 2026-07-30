@@ -8,13 +8,15 @@ using Assets.Scripts.ScriptableObjects.Shop;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using Zenject;
 
 namespace Assets.Scripts.UI.Canvases
 {
 	public class ShopCanvasHandler : CanvasHandlerBase
 	{
-		[Header("Data")]
-		[SerializeField] private CoinDataSo coinData;
+		[Inject] private DiContainer _diContainer;
+		[Inject] private ISaveService _saveService;
+		[Inject] private CoinDataSo _coinData;
 
 		[Header("Coin Counter")]
 		[SerializeField] private Text coinCounterText;
@@ -76,7 +78,7 @@ namespace Assets.Scripts.UI.Canvases
 		{
 			if (!IsVisible) return;
 
-			coinCounterText.text = coinData.CoinAmount.ToString();
+			coinCounterText.text = _coinData.CoinAmount.ToString();
 		}
 
 		private void OnBackButtonClicked()
@@ -86,7 +88,7 @@ namespace Assets.Scripts.UI.Canvases
 				ButtonType = UiButtonType.Back
 			});
 
-			SaveManager.SaveShopSettings(_shopSave);
+			_saveService.SaveShopSettings(_shopSave);
 		}
 
 		private void OnNextButtonClicked()
@@ -170,7 +172,8 @@ namespace Assets.Scripts.UI.Canvases
 			{
 				ShopItemConfig itemConfig = ShopItems[i];
 				bool isUnlocked = i == 0 || _shopSave.unlockedItems.Contains(itemConfig.Name);
-				ShopItemHandler shopItemHandler = Instantiate(itemConfig.ShopItemHandler, container)
+				ShopItemHandler shopItemHandler = _diContainer
+					.InstantiatePrefabForComponent<ShopItemHandler>(itemConfig.ShopItemHandler, container)
 					.SetName(itemConfig.Name)
 					.SetPrice(itemConfig.Price)
 					.SetShopItem(itemConfig)
@@ -198,7 +201,7 @@ namespace Assets.Scripts.UI.Canvases
 
 		private void LoadShopSave()
 		{
-			_shopSave = SaveManager.LoadShopSettings();
+			_shopSave = _saveService.LoadShopSettings();
 			_selectedItemName = _shopSave.selectedItemName;
 
 			if (!string.IsNullOrEmpty(_selectedItemName) && _shopSave.unlockedItems.Contains(_selectedItemName)) return;
@@ -206,7 +209,7 @@ namespace Assets.Scripts.UI.Canvases
 			_selectedItemName = ShopItems[0].Name;
 			_shopSave.selectedItemName = _selectedItemName;
 
-			SaveManager.SaveShopSettings(_shopSave);
+			_saveService.SaveShopSettings(_shopSave);
 		}
 
 		public void PurchaseItem(ShopItemConfig itemConfig)
@@ -217,7 +220,7 @@ namespace Assets.Scripts.UI.Canvases
 
 			_shopSave.unlockedItems.Add(itemConfig.Name);
 
-			SaveManager.SaveShopSettings(_shopSave);
+			_saveService.SaveShopSettings(_shopSave);
 		}
 
 		public void SelectItem(ShopItemHandler itemHandler)
@@ -232,7 +235,7 @@ namespace Assets.Scripts.UI.Canvases
 			_selectedItemName = itemHandler.GetName();
 			_shopSave.selectedItemName = _selectedItemName;
 
-			SaveManager.SaveShopSettings(_shopSave);
+			_saveService.SaveShopSettings(_shopSave);
 		}
 	}
 }

@@ -8,17 +8,5 @@ namespace Assets.Scripts.EventsFolder
 		{
 			public int CoinAmount;
 		}
-
-		public struct BuyRequest : IEvent
-		{
-			public string RequestName;
-			public int Price;
-		}
-
-		public struct BuyResponse : IEvent
-		{
-			public string ResponseName;
-			public bool Response;
-		}
 	}
 }

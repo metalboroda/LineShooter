@@ -4,30 +4,29 @@ using Assets.Scripts.EventsFolder;
 using Assets.Scripts.SaveSystem;
 using Assets.Scripts.ScriptableObjects.Infrastructure;
 using UnityEngine;
+using Zenject;
 
 namespace Assets.Scripts.GameManagement
 {
-	public class CoinManager : MonoBehaviour
+	public class CoinManager : MonoBehaviour, ICoinWallet
 	{
-		[Header("Data")]
-		[SerializeField] private CoinDataSo coinDataSo;
-
+		[Inject] private CoinDataSo _coinDataSo;
+		[Inject] private ISaveService _saveService;
+		
 		[Header("Debug")]
 		[SerializeField] private bool debug;
 		[SerializeField] private int startCoinAmount = 999999;
 
 		private int _coinAmount;
-
 		private CoinSave _coinSave;
-
-		private EventBinding<CurrencyEvents.BuyRequest> _buyRequest;
+		
 		private EventBinding<CurrencyEvents.CoinIncreased> _coinIncreased;
 		private EventBinding<UIEvents.CanvasChanged> _canvasChanged;
 		private EventBinding<UIEvents.UIButtonClicked> _uiButtonClicked;
 
 		private void Awake()
 		{
-			coinDataSo.CoinAmount = 0;
+			_coinDataSo.CoinAmount = 0;
 
 			if (debug)
 				_coinAmount = startCoinAmount;
@@ -37,13 +36,11 @@ namespace Assets.Scripts.GameManagement
 
 		private void Start()
 		{
-			coinDataSo.CoinAmount = _coinAmount;
+			_coinDataSo.CoinAmount = _coinAmount;
 		}
 
 		private void OnEnable()
 		{
-			_buyRequest = new EventBinding<CurrencyEvents.BuyRequest>(OnBuyRequest);
-			EventBus<CurrencyEvents.BuyRequest>.Register(_buyRequest);
 			_coinIncreased = new EventBinding<CurrencyEvents.CoinIncreased>(OnCoinIncreased);
 			EventBus<CurrencyEvents.CoinIncreased>.Register(_coinIncreased);
 			_canvasChanged = new EventBinding<UIEvents.CanvasChanged>(OnCanvasChanged);
@@ -54,41 +51,40 @@ namespace Assets.Scripts.GameManagement
 
 		private void OnDisable()
 		{
-			EventBus<CurrencyEvents.BuyRequest>.Unregister(_buyRequest);
 			EventBus<CurrencyEvents.CoinIncreased>.Unregister(_coinIncreased);
 			EventBus<UIEvents.CanvasChanged>.Unregister(_canvasChanged);
 			EventBus<UIEvents.UIButtonClicked>.Unregister(_uiButtonClicked);
 		}
 
-		private void OnBuyRequest(CurrencyEvents.BuyRequest eventData)
+		public int CoinAmount => _coinAmount;
+
+		public bool CanAfford(int price) => price <= _coinAmount;
+
+		public bool TryPurchase(int price)
 		{
-			if (eventData.Price > _coinAmount) return;
+			if (price > _coinAmount) return false;
 
-			EventBus<CurrencyEvents.BuyResponse>.Raise(new CurrencyEvents.BuyResponse
-			{
-				ResponseName = eventData.RequestName,
-				Response = true
-			});
-
-			_coinAmount -= eventData.Price;
+			_coinAmount -= price;
 
 			if (_coinAmount < 0)
 				_coinAmount = 0;
 
-			coinDataSo.CoinAmount = _coinAmount;
+			_coinDataSo.CoinAmount = _coinAmount;
 
 			SaveCoins();
+
+			return true;
 		}
 
 		private void OnCoinIncreased(CurrencyEvents.CoinIncreased eventData)
 		{
-			coinDataSo.CoinAmount += eventData.CoinAmount;
-			_coinAmount = coinDataSo.CoinAmount;
+			_coinDataSo.CoinAmount += eventData.CoinAmount;
+			_coinAmount = _coinDataSo.CoinAmount;
 		}
 
 		private void OnCanvasChanged(UIEvents.CanvasChanged eventData)
 		{
-			coinDataSo.CoinAmount = _coinAmount;
+			_coinDataSo.CoinAmount = _coinAmount;
 		}
 
 		private void OnUiButtonClicked(UIEvents.UIButtonClicked eventData)
@@ -97,7 +93,7 @@ namespace Assets.Scripts.GameManagement
 			{
 				LoadCoins();
 
-				coinDataSo.CoinAmount = _coinAmount;
+				_coinDataSo.CoinAmount = _coinAmount;
 			}
 		}
 
@@ -106,12 +102,12 @@ namespace Assets.Scripts.GameManagement
 			_coinSave ??= new CoinSave();
 			_coinSave.overallCoinAmount = _coinAmount;
 
-			SaveManager.SaveCoinSettings(_coinSave);
+			_saveService.SaveCoinSettings(_coinSave);
 		}
 
 		private void LoadCoins()
 		{
-			_coinSave = SaveManager.LoadCoinSettings();
+			_coinSave = _saveService.LoadCoinSettings();
 			_coinAmount = _coinSave.overallCoinAmount;
 		}
 	}

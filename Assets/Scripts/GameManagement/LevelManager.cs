@@ -1,17 +1,18 @@
 using Assets.Scripts.Enums;
 using Assets.Scripts.EventBus;
 using Assets.Scripts.EventsFolder;
-using Assets.Scripts.GameManagement.GameStates;
+using Assets.Scripts.GameFlow.GameStates;
 using Assets.Scripts.SaveSystem;
 using Assets.Scripts.ScriptableObjects.Infrastructure;
 using UnityEngine;
+using Zenject;
 
 namespace Assets.Scripts.GameManagement
 {
 	public class LevelManager : MonoBehaviour
 	{
-		[Header("Data")]
-		[SerializeField] private LevelDataSo levelDataSo;
+		[Inject] private ISaveService _saveService;
+		[Inject] private LevelDataSo _levelDataSo;
 
 		[Header("References")]
 		[SerializeField] private GameObject[] levels;
@@ -86,13 +87,13 @@ namespace Assets.Scripts.GameManagement
 
 		private void SaveLevelRating()
 		{
-			levelDataSo.CurrentLevelRating = _currentLevelRating;
+			_levelDataSo.CurrentLevelRating = _currentLevelRating;
 
-			LevelSave levelSave = SaveManager.LoadLevelSettings();
+			LevelSave levelSave = _saveService.LoadLevelSettings();
 
 			levelSave.SetLevelRating(_currentLevelIndex, _currentLevelRating);
 
-			SaveManager.SaveLevelSettings(levelSave);
+			_saveService.SaveLevelSettings(levelSave);
 		}
 	}
 }

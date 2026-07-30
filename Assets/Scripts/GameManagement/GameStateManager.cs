@@ -4,13 +4,16 @@ using Assets.Scripts.Enums;
 using Assets.Scripts.EventBus;
 using Assets.Scripts.EventsFolder;
 using Assets.Scripts.FSM;
-using Assets.Scripts.GameManagement.GameStates;
+using Assets.Scripts.GameFlow.GameStates;
 using UnityEngine;
+using Zenject;
 
 namespace Assets.Scripts.GameManagement
 {
 	public class GameStateManager : MonoBehaviour
 	{
+		[Inject] private DiContainer _diContainer;
+
 		public IFiniteStateMachine<GameStateManager> Fsm { get; private set; }
 		public StateFactory<GameStateManager> StateFactory { get; private set; }
 
@@ -22,7 +25,7 @@ namespace Assets.Scripts.GameManagement
 		private void Awake()
 		{
 			Fsm = new FiniteStateMachine<GameStateManager>(this);
-			StateFactory = new StateFactory<GameStateManager>(this);
+			StateFactory = new StateFactory<GameStateManager>(this, _diContainer);
 
 			Fsm.StateChanged += OnStateChanged;
 

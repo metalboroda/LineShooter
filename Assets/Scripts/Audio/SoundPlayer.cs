@@ -1,7 +1,7 @@
 using Assets.Scripts.Components;
 using Assets.Scripts.EventBus;
 using Assets.Scripts.EventsFolder;
-using Assets.Scripts.GameManagement.GameStates;
+using Assets.Scripts.GameFlow.GameStates;
 using UnityEngine;
 
 namespace Assets.Scripts.Audio

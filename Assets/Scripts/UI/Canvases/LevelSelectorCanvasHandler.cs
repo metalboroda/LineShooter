@@ -7,11 +7,14 @@ using Assets.Scripts.ScriptableObjects.LevelSelector;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using Zenject;
 
 namespace Assets.Scripts.UI.Canvases
 {
 	public class LevelSelectorCanvasHandler : CanvasHandlerBase
 	{
+		[Inject] private ISaveService _saveService;
+
 		[Header("Settings")]
 		[SerializeField] private bool unlockAllLevels;
 		[Space]
@@ -159,7 +162,7 @@ namespace Assets.Scripts.UI.Canvases
 
 		private void LoadAndUpdateLevelUnlocks()
 		{
-			_levelSaveData = SaveManager.LoadLevelSettings();
+			_levelSaveData = _saveService.LoadLevelSettings();
 
 			for (int i = 0; i < LevelSelectorItems.Length; i++)
 			{

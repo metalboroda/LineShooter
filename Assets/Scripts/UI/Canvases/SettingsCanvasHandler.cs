@@ -4,11 +4,14 @@ using Assets.Scripts.EventsFolder;
 using Assets.Scripts.SaveSystem;
 using UnityEngine;
 using UnityEngine.UI;
+using Zenject;
 
 namespace Assets.Scripts.UI.Canvases
 {
     public class SettingsCanvasHandler : CanvasHandlerBase
     {
+        [Inject] private ISaveService _saveService;
+
         [Header("References")]
         [SerializeField] private Button backButton;
         [Space(20)]
@@ -47,7 +50,7 @@ namespace Assets.Scripts.UI.Canvases
 
         private void LoadSettings()
         {
-            _settings = SaveManager.LoadSettings();
+            _settings = _saveService.LoadSettings();
 
             UpdateMusicButton();
             UpdateSfxButton();
@@ -60,7 +63,7 @@ namespace Assets.Scripts.UI.Canvases
             EventBus<UIEvents.UiMusicClicked>.Raise(new UIEvents.UiMusicClicked());
             EventBus<UIEvents.UIButtonClicked>.Raise(new UIEvents.UIButtonClicked());
 
-            SaveManager.SaveSettings(_settings);
+            _saveService.SaveSettings(_settings);
 
             UpdateMusicButton();
         }
@@ -72,7 +75,7 @@ namespace Assets.Scripts.UI.Canvases
             EventBus<UIEvents.UiSfxClicked>.Raise(new UIEvents.UiSfxClicked());
             EventBus<UIEvents.UIButtonClicked>.Raise(new UIEvents.UIButtonClicked());
 
-            SaveManager.SaveSettings(_settings);
+            _saveService.SaveSettings(_settings);
 
             UpdateSfxButton();
         }

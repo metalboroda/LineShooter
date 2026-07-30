@@ -1,17 +1,17 @@
 using Assets.Scripts.EventBus;
 using Assets.Scripts.EventsFolder;
-using Assets.Scripts.ScriptableObjects.Infrastructure;
+using Assets.Scripts.GameManagement;
 using Assets.Scripts.UI.Canvases;
 using UnityEngine;
 using UnityEngine.UI;
+using Zenject;
 
 namespace Assets.Scripts.UI
 {
 	public class ShopItemHandler : MonoBehaviour
 	{
-		[Header("Data")]
-		[SerializeField] private CoinDataSo coinData;
-
+		[Inject] private ICoinWallet _coinWallet;
+		
 		[Header("References")]
 		[SerializeField] private Text priceText;
 		[Space]
@@ -31,13 +31,8 @@ namespace Assets.Scripts.UI
 
 		private ShopCanvasHandler _shopCanvasHandler;
 
-		private EventBinding<CurrencyEvents.BuyResponse> _buyResponse;
-
 		private void OnEnable()
 		{
-			_buyResponse = new EventBinding<CurrencyEvents.BuyResponse>(OnBuyResponse);
-			EventBus<CurrencyEvents.BuyResponse>.Register(_buyResponse);
-
 			buyButton.onClick.AddListener(BuyItem);
 			selectButton.onClick.AddListener(SelectItem);
 
@@ -46,8 +41,6 @@ namespace Assets.Scripts.UI
 
 		private void OnDisable()
 		{
-			EventBus<CurrencyEvents.BuyResponse>.Unregister(_buyResponse);
-
 			buyButton.onClick.RemoveAllListeners();
 			selectButton.onClick.RemoveAllListeners();
 		}
@@ -110,11 +103,9 @@ namespace Assets.Scripts.UI
 
 		private void BuyItem()
 		{
-			EventBus<CurrencyEvents.BuyRequest>.Raise(new CurrencyEvents.BuyRequest
-			{
-				RequestName = _itemName,
-				Price = _price
-			});
+			if (!_coinWallet.TryPurchase(_price)) return;
+
+			UnlockItem();
 
 			EventBus<UIEvents.UIButtonClicked>.Raise(new UIEvents.UIButtonClicked());
 		}
@@ -130,12 +121,6 @@ namespace Assets.Scripts.UI
 			_shopCanvasHandler.PurchaseItem(_shopItemConfig);
 		}
 
-		private void OnBuyResponse(CurrencyEvents.BuyResponse eventData)
-		{
-			if (eventData.ResponseName == _itemName && eventData.Response)
-				UnlockItem();
-		}
-
 		private void SelectItem()
 		{
 			_shopCanvasHandler.SelectItem(this);
@@ -145,9 +130,9 @@ namespace Assets.Scripts.UI
 
 		private void UpdateBuyButtonState()
 		{
-			if (buyButton is null || coinData is null) return;
+			if (buyButton is null || _coinWallet is null) return;
 
-			buyButton.interactable = coinData.CoinAmount >= _price;
+			buyButton.interactable = _coinWallet.CanAfford(_price);
 
 			if (!_unlocked)
 				selectedButton.gameObject.SetActive(false);
