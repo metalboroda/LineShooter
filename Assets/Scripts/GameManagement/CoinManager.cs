@@ -8,7 +8,7 @@ using Zenject;
 
 namespace Assets.Scripts.GameManagement
 {
-	public class CoinManager : MonoBehaviour, ICoinWallet
+	public class CoinManager : MonoBehaviour, ICoinWallet, IInitializable
 	{
 		[Inject] private CoinDataSo _coinDataSo;
 		[Inject] private ISaveService _saveService;
@@ -24,7 +24,7 @@ namespace Assets.Scripts.GameManagement
 		private EventBinding<UIEvents.CanvasChanged> _canvasChanged;
 		private EventBinding<UIEvents.UIButtonClicked> _uiButtonClicked;
 
-		private void Awake()
+		public void Initialize()
 		{
 			_coinDataSo.CoinAmount = 0;
 
@@ -32,10 +32,7 @@ namespace Assets.Scripts.GameManagement
 				_coinAmount = startCoinAmount;
 			else
 				LoadCoins();
-		}
 
-		private void Start()
-		{
 			_coinDataSo.CoinAmount = _coinAmount;
 		}
 

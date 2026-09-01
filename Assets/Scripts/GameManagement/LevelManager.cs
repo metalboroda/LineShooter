@@ -1,10 +1,14 @@
+using System.Threading;
 using Assets.Scripts.Enums;
 using Assets.Scripts.EventBus;
 using Assets.Scripts.EventsFolder;
 using Assets.Scripts.GameFlow.GameStates;
+using Assets.Scripts.GameManagement.LevelLoading;
 using Assets.Scripts.SaveSystem;
 using Assets.Scripts.ScriptableObjects.Infrastructure;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using Zenject;
 
 namespace Assets.Scripts.GameManagement
@@ -14,16 +18,35 @@ namespace Assets.Scripts.GameManagement
 		[Inject] private ISaveService _saveService;
 		[Inject] private LevelDataSo _levelDataSo;
 
-		[Header("References")]
+		[Header("Load type")]
+		[SerializeField] private LevelLoadType loadType;
+
+		[Header("References (Prefab load type)")]
 		[SerializeField] private GameObject[] levels;
 
-		private GameObject _spawnedLevel;
+		[Header("References (AddressableScene load type)")]
+		[SerializeField] private AssetReference[] levelScenes;
+
+		private ILevelLoader _levelLoader;
+		private CancellationToken _destroyCancellationToken;
+
 		private int _currentLevelIndex;
 		private int _currentLevelRating;
 
 		private EventBinding<UIEvents.SelectorItemPlayPressed> _selectorItemPlayPressed;
 		private EventBinding<GameEvents.GameStateChanged> _gameStateChanged;
 		private EventBinding<UIEvents.UIButtonClicked> _uiButtonClicked;
+
+		private void Awake()
+		{
+			_destroyCancellationToken = this.GetCancellationTokenOnDestroy();
+
+			_levelLoader = loadType switch
+			{
+				LevelLoadType.AddressableScene => new AddressableSceneLevelLoader(levelScenes),
+				_ => new PrefabLevelLoader(levels)
+			};
+		}
 
 		private void OnEnable()
 		{
@@ -47,14 +70,14 @@ namespace Assets.Scripts.GameManagement
 			_currentLevelIndex = eventData.Index;
 			_currentLevelRating = eventData.Rating;
 
-			SpawnLevel(_currentLevelIndex);
+			SpawnLevelAsync(_currentLevelIndex).Forget();
 		}
 
 		private void OnGameStateChanged(GameEvents.GameStateChanged eventData)
 		{
 			if (eventData.State is not GameMainMenuState) return;
-			if (_spawnedLevel is not null)
-				Destroy(_spawnedLevel);
+
+			_levelLoader.UnloadCurrentLevel();
 
 			_currentLevelIndex = 0;
 			_currentLevelRating = 0;
@@ -64,15 +87,16 @@ namespace Assets.Scripts.GameManagement
 		{
 			if (eventData.ButtonType != UiButtonType.Restart) return;
 
-			Destroy(_spawnedLevel);
-			SpawnLevel(_currentLevelIndex);
+			SpawnLevelAsync(_currentLevelIndex).Forget();
 		}
 
-		private void SpawnLevel(int index)
+		private async UniTaskVoid SpawnLevelAsync(int index)
 		{
-			if (index < 0 || index >= levels.Length) return;
+			if (index < 0 || index >= _levelLoader.LevelCount) return;
 
-			_spawnedLevel = Instantiate(levels[index]);
+			await _levelLoader.LoadLevelAsync(index, _destroyCancellationToken);
+
+			if (_destroyCancellationToken.IsCancellationRequested) return;
 
 			_currentLevelIndex = index;
 		}

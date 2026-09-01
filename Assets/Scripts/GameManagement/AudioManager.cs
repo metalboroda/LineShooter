@@ -8,7 +8,7 @@ using Zenject;
 
 namespace Assets.Scripts.GameManagement
 {
-    public class AudioManager : MonoBehaviour
+    public class AudioManager : MonoBehaviour, IInitializable
     {
         [Inject] private ISaveService _saveService;
         [Inject] private AudioMixer _mixer;
@@ -34,7 +34,7 @@ namespace Assets.Scripts.GameManagement
             EventBus<UIEvents.UiSfxClicked>.Unregister(_uiSfxClicked);
         }
 
-        private void Start()
+        public void Initialize()
         {
             LoadSettings();
             ApplyVolumeSettings();

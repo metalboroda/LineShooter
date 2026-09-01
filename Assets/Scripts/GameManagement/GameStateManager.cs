@@ -10,7 +10,7 @@ using Zenject;
 
 namespace Assets.Scripts.GameManagement
 {
-	public class GameStateManager : MonoBehaviour
+	public class GameStateManager : MonoBehaviour, IInitializable
 	{
 		[Inject] private DiContainer _diContainer;
 
@@ -22,7 +22,7 @@ namespace Assets.Scripts.GameManagement
 		private EventBinding<UIEvents.UIButtonClicked> _uiButtonClicked;
 		private EventBinding<UIEvents.SelectorItemPlayPressed> _selectorItemPlayPressed;
 
-		private void Awake()
+		public void Initialize()
 		{
 			Fsm = new FiniteStateMachine<GameStateManager>(this);
 			StateFactory = new StateFactory<GameStateManager>(this, _diContainer);
@@ -60,7 +60,8 @@ namespace Assets.Scripts.GameManagement
 
 		private void OnDestroy()
 		{
-			Fsm.StateChanged -= OnStateChanged;
+			if (Fsm != null)
+				Fsm.StateChanged -= OnStateChanged;
 		}
 
 		private void OnStateChanged(IState<GameStateManager> newState)

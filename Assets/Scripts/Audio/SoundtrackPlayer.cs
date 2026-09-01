@@ -54,7 +54,7 @@ namespace Assets.Scripts.Audio
 		{
 			if (soundtrackClips == null || soundtrackClips.Length == 0)
 			{
-				Debug.LogWarning("Soundtrack clips array is empty. Stopping playback.");
+				// Debug.LogWarning("Soundtrack clips array is empty. Stopping playback.");
 				return;
 			}
 
